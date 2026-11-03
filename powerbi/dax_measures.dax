@@ -1,50 +1,50 @@
 /* =========================================================================
-   DAX MEASURES LIBRARY: RETAIL EXECUTIVE ANALYTICS
+   DAX MEASURES LIBRARY: RETAIL EXECUTIVE ANALYTICS (UPDATED)
    Model: Star Schema (fact_sales_daily, dim_product, dim_customer, dim_date)
    ========================================================================= */
 
 // -------------------------------------------------------------------------
-// 1. BASE REVENUE & VOLUME MEASURES
+// 1. DATE TABLE DEFINITION
+// -------------------------------------------------------------------------
+dim_date = 
+ADDCOLUMNS (
+    CALENDARAUTO(),
+    "Year", YEAR([Date]),
+    "MonthNumber", MONTH([Date]),
+    "MonthName", FORMAT([Date], "mmmm"),
+    "MonthYear", FORMAT([Date], "mmm yyyy"),
+    "MonthYearSort", FORMAT([Date], "yyyymm"),
+    "Quarter", "Q" & FORMAT([Date], "Q")
+)
+
+// -------------------------------------------------------------------------
+// 2. CORE PERFORMANCE MEASURES
 // -------------------------------------------------------------------------
 
 // Doanh thu thuần
 [Total Net Sales] = 
-SUM('gold_fact_sales_daily'[total_sales_amount])
+SUM('fact_sales_daily'[total_sales_amount])
+
+// Tổng số đơn hàng duy nhất (Degenerate Dimension)
+[Total Orders] = 
+DISTINCTCOUNT('fact_sales_daily'[order_id])
 
 // Tổng số lượng sản phẩm bán ra
 [Total Units Sold] = 
-SUM('gold_fact_sales_daily'[quantity])
+SUM('fact_sales_daily'[quantity])
 
-// Tổng số đơn hàng duy nhất (chống double-counting do Degenerate Dimension)
-[Total Orders] = 
-DISTINCTCOUNT('gold_fact_sales_daily'[order_id])
-
-// Giá trị trung bình trên một đơn hàng (Average Order Value - AOV)
+// Giá trị đơn hàng trung bình (AOV)
 [Average Order Value] = 
 DIVIDE([Total Net Sales], [Total Orders], 0)
 
 // -------------------------------------------------------------------------
-// 2. TIME INTELLIGENCE MEASURES (MoM & YoY Analysis)
+// 3. TIME INTELLIGENCE & DYNAMIC GROWTH
 // -------------------------------------------------------------------------
 
-// Doanh thu cùng kỳ tháng trước (Month-over-Month)
-[Sales LM] = 
-CALCULATE(
-    [Total Net Sales],
-    PREVIOUSMONTH('dim_date'[Date])
-)
-
-// Chênh lệch doanh số so với tháng trước
-[Sales Variance MoM] = 
-[Total Net Sales] - [Sales LM]
-
-// Tỷ lệ tăng trưởng doanh số theo tháng (%)
+// Tỷ lệ tăng trưởng doanh thu so với tháng trước (tự động so sánh tháng gần nhất)
 [Sales Growth MoM %] = 
-DIVIDE([Sales Variance MoM], [Sales LM], 0)
-
-// Doanh thu lũy kế từ đầu năm (Year-to-Date)
-[Sales YTD] = 
-TOTALYTD(
-    [Total Net Sales],
-    'dim_date'[Date]
-)
+VAR LatestDate = MAX('dim_date'[Date])
+VAR CurrentMonthSales = CALCULATE([Total Net Sales], DATESMTD('dim_date'[Date]))
+VAR PreviousMonthSales = CALCULATE([Total Net Sales], DATEADD(DATESMTD('dim_date'[Date]), -1, MONTH))
+RETURN
+DIVIDE(CurrentMonthSales - PreviousMonthSales, PreviousMonthSales, 0)
