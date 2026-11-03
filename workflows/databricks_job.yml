@@ -1,0 +1,30 @@
+resources:
+  jobs:
+    OmniRetail_Medallion_Pipeline:
+      name: OmniRetail_Medallion_Pipeline
+      tasks:
+        - task_key: task_bronze_ingestion
+          notebook_task:
+            notebook_path: /Workspace/Users/nguyenthanhtra184@gmail.com/databricks-retail-lakehouse-powerbi/notebooks/01_bronze_ingestion
+            source: WORKSPACE
+        - task_key: task_silver_transformation
+          depends_on:
+            - task_key: task_bronze_ingestion
+          notebook_task:
+            notebook_path: /Workspace/Users/nguyenthanhtra184@gmail.com/databricks-retail-lakehouse-powerbi/notebooks/02_silver_transform
+            source: WORKSPACE
+        - task_key: task_gold_star_schema
+          depends_on:
+            - task_key: task_silver_transformation
+          notebook_task:
+            notebook_path: /Workspace/Users/nguyenthanhtra184@gmail.com/databricks-retail-lakehouse-powerbi/notebooks/03_gold_star_schema
+            source: WORKSPACE
+        - task_key: task_reconciliation_audit
+          depends_on:
+            - task_key: task_gold_star_schema
+          notebook_task:
+            notebook_path: /Workspace/Users/nguyenthanhtra184@gmail.com/databricks-retail-lakehouse-powerbi/tests/04_data_reconciliation
+            source: WORKSPACE
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED

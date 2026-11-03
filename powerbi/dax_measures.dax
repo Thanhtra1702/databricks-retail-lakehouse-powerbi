@@ -1,0 +1,50 @@
+/* =========================================================================
+   DAX MEASURES LIBRARY: RETAIL EXECUTIVE ANALYTICS
+   Model: Star Schema (fact_sales_daily, dim_product, dim_customer, dim_date)
+   ========================================================================= */
+
+// -------------------------------------------------------------------------
+// 1. BASE REVENUE & VOLUME MEASURES
+// -------------------------------------------------------------------------
+
+// Doanh thu thuần
+[Total Net Sales] = 
+SUM('gold_fact_sales_daily'[total_sales_amount])
+
+// Tổng số lượng sản phẩm bán ra
+[Total Units Sold] = 
+SUM('gold_fact_sales_daily'[quantity])
+
+// Tổng số đơn hàng duy nhất (chống double-counting do Degenerate Dimension)
+[Total Orders] = 
+DISTINCTCOUNT('gold_fact_sales_daily'[order_id])
+
+// Giá trị trung bình trên một đơn hàng (Average Order Value - AOV)
+[Average Order Value] = 
+DIVIDE([Total Net Sales], [Total Orders], 0)
+
+// -------------------------------------------------------------------------
+// 2. TIME INTELLIGENCE MEASURES (MoM & YoY Analysis)
+// -------------------------------------------------------------------------
+
+// Doanh thu cùng kỳ tháng trước (Month-over-Month)
+[Sales LM] = 
+CALCULATE(
+    [Total Net Sales],
+    PREVIOUSMONTH('dim_date'[Date])
+)
+
+// Chênh lệch doanh số so với tháng trước
+[Sales Variance MoM] = 
+[Total Net Sales] - [Sales LM]
+
+// Tỷ lệ tăng trưởng doanh số theo tháng (%)
+[Sales Growth MoM %] = 
+DIVIDE([Sales Variance MoM], [Sales LM], 0)
+
+// Doanh thu lũy kế từ đầu năm (Year-to-Date)
+[Sales YTD] = 
+TOTALYTD(
+    [Total Net Sales],
+    'dim_date'[Date]
+)
